@@ -1,0 +1,26 @@
+{
+    "tasks": [
+        [
+            "Piano",
+            "piano",
+            5,
+            "Art",
+            "2024-06-17"
+        ]
+    ],
+    "xp": 5,
+    "level": 1,
+    "streaks": {
+        "piano": [
+            "2024-06-17"
+        ]
+    },
+    "stats": {
+        "Body": 0,
+        "Mind": 0,
+        "Art": 5,
+        "Tech": 0,
+        "Home": 0,
+        "Spirit": 0
+    }
+}
