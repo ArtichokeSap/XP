@@ -2,7 +2,7 @@ import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
 from datetime import datetime
-from xp_tracker import User, Task  # Import your backend
+from xp_tracker import User, Task
 
 # Initialize User and load data
 if 'user' not in st.session_state:
@@ -10,79 +10,69 @@ if 'user' not in st.session_state:
     try:
         st.session_state.user.load_from_json("user_data.json")
     except FileNotFoundError:
-        pass  # File may not exist initially
+        pass
 
 user = st.session_state.user
 
-# Streamlit UI
-st.title("XP Tracker")
+# Reduce whitespace
+st.set_page_config(layout="centered", page_title="Total XP")  # Minimize margins
 
-# Entry Section
-st.subheader("Add Task")
+# Sidebar for inputs
+with st.sidebar:
+    st.subheader("Add Task")
+    desc = st.text_input("Description", placeholder="Enter task description")
+    categories = ['typing', 'piano', 'reading', 'exercise', 'cleaning']
+    cat = st.selectbox("Category", categories, index=0)
+    stats = ['Body', 'Mind', 'Art', 'Tech', 'Home', 'Spirit']
+    stat = st.selectbox("Stat", stats, index=0)
+    minutes = st.number_input("Minutes", min_value=0, step=1, value=0)
+    date = st.date_input("Date", value=datetime.now())
+    if st.button("Submit"):
+        if desc and minutes > 0:
+            try:
+                task = Task(name=desc, category=cat, duration=int(minutes), stat=stat, date=date)
+                user.add_task(task)
+                user.save_to_json("user_data.json")
+                st.success(f"Added: {desc} ({minutes} min)")
+            except Exception as e:
+                st.error(f"Error: {e}")
+        else:
+            st.error("Please provide a description and valid minutes.")
+    if st.button("Undo"):
+        user.undo()
+        user.save_to_json("user_data.json")
+        st.success("Last action undone.")
 
-# Task description
-desc = st.text_input("Description", placeholder="Enter task description")
+# Main panel for outputs
+# Title with Total XP
+st.markdown(f"<h1 style='margin-top: 0; margin-bottom: 10px;'>Total XP: {user.xp}</h1>", unsafe_allow_html=True)
 
-# Category dropdown
-categories = ['typing', 'piano', 'reading', 'exercise', 'cleaning']
-cat = st.selectbox("Category", categories, index=0)
-
-# Stat dropdown
-stats = ['Body', 'Mind', 'Art', 'Tech', 'Home', 'Spirit']
-stat = st.selectbox("Stat", stats, index=0)
-
-# Minutes input
-minutes = st.number_input("Minutes", min_value=0, step=1, value=0)
-
-# Date picker
-date = st.date_input("Date", value=datetime.now())
-
-# Submit button
-if st.button("Submit"):
-    if desc and minutes > 0:
-        try:
-            task = Task(
-                name=desc,
-                category=cat,
-                duration=int(minutes),
-                stat=stat,
-                date=date
-            )
-            user.add_task(task)
-            user.save_to_json("user_data.json")
-            st.success(f"Added: {desc} ({minutes} min)")
-        except Exception as e:
-            st.error(f"Error: {e}")
-    else:
-        st.error("Please provide a description and valid minutes.")
-
-# Undo button
-if st.button("Undo"):
-    user.undo()
-    user.save_to_json("user_data.json")
-    st.success("Last action undone.")
-
-# Stats display
-st.subheader("Stats")
-stats_text = f"XP: {user.xp}\nLevel: {user.level}\n" + "\n".join(f"{k}: {v}" for k, v in user.stats.items())
-st.text(stats_text)
-
-# Recent tasks display
-st.subheader("Recent Tasks")
+# XP by Stat bar chart
 if user.tasks:
-    task_data = [
-        {"Date": t.date, "Description": t.name, "Duration (min)": t.duration, "Category": t.category, "Stat": t.stat}
-        for t in user.tasks[-5:]  # Last 5 tasks
-    ]
-    df = pd.DataFrame(task_data)
-    st.dataframe(df, use_container_width=True)
+    stat_colors = {'Body': 'red', 'Mind': 'magenta', 'Art': 'green', 'Tech': 'darkblue', 'Home': 'orange', 'Spirit': 'purple'}
+    fig = go.Figure(data=go.Bar(
+        x=list(user.stats.keys()),
+        y=list(user.stats.values()),
+        marker_color=[stat_colors[stat] for stat in user.stats.keys()],
+        text=list(user.stats.values()),  # XP values on bars
+        textposition='auto',
+        textfont=dict(size=16, weight='bold')  # Bar labels unchanged
+    ))
+    fig.update_layout(
+        xaxis_title="Stat",
+        yaxis_title="XP",
+        xaxis_title_font=dict(size=32, weight='bold'),  # 2x larger, bold
+        yaxis_title_font=dict(size=32, weight='bold'),  # 2x larger, bold
+        yaxis=dict(autorange=True),
+        margin=dict(l=20, r=20, t=20, b=20)  # Reduce plot margins
+    )
+    st.plotly_chart(fig, use_container_width=True, config={'staticPlot': True, 'displayModeBar': False})
 else:
-    st.write("No tasks yet.")
+    st.write("No stat data to plot yet.")
 
-# Static Plotly plot for XP trend
-st.subheader("XP Trend")
+# XP Trend plot
+st.subheader("XP Trend", help=None)
 if user.tasks:
-    # Sort tasks by date to ensure chronological order
     sorted_tasks = sorted(user.tasks, key=lambda t: t.date)
     df = pd.DataFrame([
         {
@@ -101,8 +91,23 @@ if user.tasks:
     fig.update_layout(
         title="XP Over Time",
         xaxis_title="Date",
-        yaxis_title="XP"
+        yaxis_title="XP",
+        xaxis_title_font=dict(size=32, weight='bold'),  # 2x larger, bold
+        yaxis_title_font=dict(size=32, weight='bold'),  # 2x larger, bold
+        margin=dict(l=20, r=20, t=20, b=20)  # Reduce plot margins
     )
     st.plotly_chart(fig, use_container_width=True, config={'staticPlot': True, 'displayModeBar': False})
 else:
     st.write("No data to plot yet.")
+
+# Recent tasks display (moved to bottom)
+st.subheader("Recent Tasks", help=None)
+if user.tasks:
+    task_data = [
+        {"Date": t.date, "Description": t.name, "Duration (min)": t.duration, "Category": t.category, "Stat": t.stat}
+        for t in user.tasks[-5:]
+    ]
+    df = pd.DataFrame(task_data)
+    st.dataframe(df, use_container_width=True)
+else:
+    st.write("No tasks yet.")
