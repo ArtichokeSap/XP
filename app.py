@@ -3,19 +3,53 @@ import plotly.graph_objects as go
 import pandas as pd
 from datetime import datetime
 from xp_tracker import User, Task
+import os
 
-# Initialize User and load data
+# File to store last loaded user
+LAST_USER_FILE = "last_user.txt"
+
+# Initialize User and load last user
 if 'user' not in st.session_state:
     st.session_state.user = User()
-    try:
-        st.session_state.user.load_from_json("user_data.json")
-    except FileNotFoundError:
-        pass
+    if os.path.exists(LAST_USER_FILE):
+        with open(LAST_USER_FILE, 'r') as f:
+            last_user = f.read().strip()
+        if last_user and os.path.exists(f"{last_user}.json"):
+            st.session_state.user.load_from_json(f"{last_user}.json")
+            st.session_state.current_user = last_user
+        else:
+            st.session_state.current_user = "default"
+    else:
+        st.session_state.current_user = "default"
 
 user = st.session_state.user
 
 # Reduce whitespace
 st.set_page_config(layout="wide")
+
+# Sidebar for user management
+with st.sidebar:
+    st.subheader("User Management")
+    user_name = st.text_input("User Name", value=st.session_state.current_user, placeholder="Enter user name")
+    if st.button("Save User"):
+        if user_name:
+            st.session_state.current_user = user_name
+            user.save_to_json(f"{user_name}.json")
+            with open(LAST_USER_FILE, 'w') as f:
+                f.write(user_name)
+            st.success(f"Saved user: {user_name}")
+        else:
+            st.error("Please enter a user name.")
+    if st.button("Load User"):
+        if user_name and os.path.exists(f"{user_name}.json"):
+            user.tasks = []
+            user.load_from_json(f"{user_name}.json")
+            st.session_state.current_user = user_name
+            with open(LAST_USER_FILE, 'w') as f:
+                f.write(user_name)
+            st.success(f"Loaded user: {user_name}")
+        else:
+            st.error(f"User {user_name} not found.")
 
 # Split layout into two columns
 col1, col2 = st.columns([1, 1])
@@ -23,28 +57,44 @@ col1, col2 = st.columns([1, 1])
 # Left pane for inputs and recent tasks
 with col1:
     st.subheader("Add Task", help=None)
-    desc = st.text_input("Description", placeholder="Enter task description")
-    categories = ['typing', 'piano', 'reading', 'exercise', 'cleaning']
-    cat = st.selectbox("Category", categories, index=0)
-    stats = ['Body', 'Mind', 'Art', 'Tech', 'Home', 'Spirit']
-    stat = st.selectbox("Stat", stats, index=0)
-    minutes = st.number_input("Minutes", min_value=0, step=1, value=0)
-    date = st.date_input("Date", value=datetime.now())
-    if st.button("Submit"):
-        if desc and minutes > 0:
-            try:
-                task = Task(name=desc, category=cat, duration=int(minutes), stat=stat, date=date)
-                user.add_task(task)
-                user.save_to_json("user_data.json")
-                st.success(f"Added: {desc} ({minutes} min)")
-            except Exception as e:
-                st.error(f"Error: {e}")
-        else:
-            st.error("Please provide a description and valid minutes.")
-    if st.button("Undo"):
-        user.undo()
-        user.save_to_json("user_data.json")
-        st.success("Last action undone.")
+    
+    # Row 1: Description, Date
+    row1 = st.columns([2, 1])
+    with row1[0]:
+        desc = st.text_input("Description", placeholder="Enter task description")
+    with row1[1]:
+        date = st.date_input("Date", value=datetime.now())
+    
+    # Row 2: Category, Stat
+    row2 = st.columns([1, 1])
+    with row2[0]:
+        categories = ['typing', 'piano', 'reading', 'exercise', 'cleaning']
+        cat = st.selectbox("Category", categories, index=0)
+    with row2[1]:
+        stats = ['Body', 'Mind', 'Art', 'Tech', 'Home', 'Spirit']
+        stat = st.selectbox("Stat", stats, index=0)
+    
+    # Row 3: Minutes, Submit, Undo
+    row3 = st.columns([1, 1, 1])
+    with row3[0]:
+        minutes = st.number_input("Minutes", min_value=0, step=1, value=0)
+    with row3[1]:
+        if st.button("Submit"):
+            if desc and minutes > 0:
+                try:
+                    task = Task(name=desc, category=cat, duration=int(minutes), stat=stat, date=date)
+                    user.add_task(task)
+                    user.save_to_json(f"{st.session_state.current_user}.json")
+                    st.success(f"Added: {desc} ({minutes} min)")
+                except Exception as e:
+                    st.error(f"Error: {e}")
+            else:
+                st.error("Please provide a description and valid minutes.")
+    with row3[2]:
+        if st.button("Undo"):
+            user.undo()
+            user.save_to_json(f"{st.session_state.current_user}.json")
+            st.success("Last action undone.")
     
     # Recent tasks at bottom of left pane
     st.subheader("Recent Tasks", help=None)
@@ -61,7 +111,7 @@ with col1:
             }
             for t in user.tasks[-5:]
         ]
-        df = pd.DataFrame(task_data)[["Date", "Description", "Category", "Stat", "Time", "Chain", "XP"]]  # Explicit column order
+        df = pd.DataFrame(task_data)[["Date", "Description", "Category", "Stat", "Time", "Chain", "XP"]]
         st.dataframe(df, use_container_width=True, hide_index=True)
     else:
         st.write("No tasks yet.")
