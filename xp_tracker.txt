@@ -73,7 +73,7 @@ class User:
             self.stats[k] = 0
         for t in sorted(self.tasks, key=lambda t: t.date):
             bonus = 1
-            if t.category in ('typing', 'piano'):
+            if t.category in ('Music', 'Typing'):
                 prev = self.streaks.get(t.category)
                 if prev and (t.date - prev[-1]).days == 1:
                     streak_len = len(prev) + 1

@@ -58,50 +58,83 @@ col1, col2 = st.columns([1, 1])
 with col1:
     st.subheader("Add Task", help=None)
     
-    # Row 1: Description, Date
-    row1 = st.columns([2, 1])
-    with row1[0]:
-        desc = st.text_input("Description", placeholder="Enter task description")
-    with row1[1]:
-        date = st.date_input("Date", value=datetime.now())
+    # Apply CSS to reduce spacing in the form
+    st.markdown(
+        """
+        <style>
+        /* Target the form container to reduce spacing between elements */
+        div[data-testid="stForm"] > div > div {
+            margin-bottom: 0px !important;
+            padding-bottom: 0px !important;
+        }
+        /* Target the radio widget's parent container */
+        div.row-widget.stRadio {
+            margin-bottom: 0px !important;
+            padding-bottom: 0px !important;
+        }
+        /* Target the horizontal radio group specifically */
+        div[data-testid="stHorizontalBlock"] {
+            margin-bottom: 0px !important;
+            padding-bottom: 0px !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
     
-    # Row 2: Category, Stat
-    row2 = st.columns([1, 1])
-    with row2[0]:
-        categories = ['typing', 'piano', 'reading', 'exercise', 'cleaning']
-        cat = st.selectbox("Category", categories, index=0)
-    with row2[1]:
+    with st.form(key="task_form", clear_on_submit=False):
+        # Row 1: Description, Category, Date
+        row1 = st.columns([2, 1, 1])
+        with row1[0]:
+            desc = st.text_input("Description", placeholder="Enter task description")
+        with row1[1]:
+            categories = ['none', 'Music', 'Typing']
+            cat = st.selectbox("Category", categories, index=0)
+        with row1[2]:
+            date = st.date_input("Date", value=datetime.now())
+        
+        # Row 2: Radio buttons for Stats
         stats = ['Body', 'Mind', 'Art', 'Tech', 'Home', 'Spirit']
-        stat = st.selectbox("Stat", stats, index=0)
-    
-    # Row 3: Minutes, Outside, Submit, Undo
-    row3 = st.columns([1, 1, 1, 1])
-    with row3[0]:
-        minutes = st.number_input("Minutes", min_value=0, step=1, value=0)
-    with row3[1]:
-        st.markdown(
-            "<div style='display: flex; justify-content: center; align-items: center; height: 100%; padding: 0px;'>",
-            unsafe_allow_html=True
+        stat_colors = {'Body': 'red', 'Mind': 'magenta', 'Art': 'green', 'Tech': 'darkblue', 'Home': 'orange', 'Spirit': 'purple'}
+        stat = st.radio(
+            "Stat",
+            stats,
+            index=0,
+            format_func=lambda x: f"{x}",
+            horizontal=True
         )
-        outside = st.checkbox("Outside")
-        st.markdown("</div>", unsafe_allow_html=True)
-    with row3[2]:
-        st.markdown(
-            "<div style='display: flex; justify-content: center; align-items: center; height: 100%; padding: 0px;'>",
-            unsafe_allow_html=True
-        )
-        submit_clicked = st.button("Submit", key="submit")
-        st.markdown("</div>", unsafe_allow_html=True)
-    with row3[3]:
-        st.markdown(
-            "<div style='display: flex; justify-content: center; align-items: center; height: 100%; padding: 0px;'>",
-            unsafe_allow_html=True
-        )
-        if st.button("Undo", key="undo"):
-            user.undo()
-            user.save_to_json(f"{st.session_state.current_user}.json")
-            st.success(f"Last action undone.")
-        st.markdown("</div>", unsafe_allow_html=True)
+        # Apply CSS to color radio buttons
+        for s in stats:
+            st.markdown(
+                f"<style>input[type='radio'][value='{s}'] + div {{ color: {stat_colors[s]} !important; }}</style>",
+                unsafe_allow_html=True
+            )
+        
+        # Row 3: Minutes, Outside, Submit, Undo
+        row3 = st.columns([1, 1, 1, 1])
+        with row3[0]:
+            minutes = st.number_input("Minutes", min_value=0, step=1, value=0, label_visibility="visible")
+        with row3[1]:
+            st.markdown(
+                "<div style='display: flex; justify-content: center; align-items: center; padding: 0px;'>",
+                unsafe_allow_html=True
+            )
+            outside = st.checkbox("Outside", label_visibility="visible")
+            st.markdown("</div>", unsafe_allow_html=True)
+        with row3[2]:
+            st.markdown(
+                "<div style='display: flex; justify-content: center; align-items: center; padding: 0px;'>",
+                unsafe_allow_html=True
+            )
+            submit_clicked = st.form_submit_button("Submit")
+            st.markdown("</div>", unsafe_allow_html=True)
+        with row3[3]:
+            st.markdown(
+                "<div style='display: flex; justify-content: center; align-items: center; padding: 0px;'>",
+                unsafe_allow_html=True
+            )
+            undo_clicked = st.form_submit_button("Undo")
+            st.markdown("</div>", unsafe_allow_html=True)
     
     # Row 4: Feedback
     if submit_clicked:
@@ -115,6 +148,10 @@ with col1:
                 st.error(f"Error: {e}")
         else:
             st.error("Please provide a description and valid minutes.")
+    if undo_clicked:
+        user.undo()
+        user.save_to_json(f"{st.session_state.current_user}.json")
+        st.success("Last action undone.")
     
     # Recent tasks at bottom of left pane
     st.subheader("Recent Tasks", help=None)
@@ -127,8 +164,8 @@ with col1:
                 "Stat": t.stat,
                 "Time": t.duration,
                 "Outside": "Yes" if t.outside else "No",
-                "Chain": f"x{min(len(user.streaks.get(t.category, [])) + 1, 3)}" if t.category in ['typing', 'piano'] else "x1",
-                "XP": t.duration * (2 if t.outside else 1) * (min(len(user.streaks.get(t.category, [])) + 1, 3) if t.category in ['typing', 'piano'] else 1)
+                "Chain": f"x{min(len(user.streaks.get(t.category, [])) + 1, 3)}" if t.category in ['Music', 'Typing'] else "x1",
+                "XP": t.duration * (2 if t.outside else 1) * (min(len(user.streaks.get(t.category, [])) + 1, 3) if t.category in ['Music', 'Typing'] else 1)
             }
             for t in user.tasks[-5:]
         ]
@@ -171,7 +208,7 @@ with col2:
         df = pd.DataFrame([
             {
                 "Date": t.date,
-                "XP": t.duration * (2 if t.outside else 1) * (min(len(user.streaks.get(t.category, [])) + 1, 3) if t.category in ['typing', 'piano'] else 1)
+                "XP": t.duration * (2 if t.outside else 1) * (min(len(user.streaks.get(t.category, [])) + 1, 3) if t.category in ['Music', 'Typing'] else 1)
             }
             for t in sorted_tasks
         ])
