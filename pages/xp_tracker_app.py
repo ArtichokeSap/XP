@@ -8,7 +8,7 @@ import os
 # Check if user is logged in
 if "logged_in" not in st.session_state or not st.session_state.logged_in:
     st.error("Please log in to access this page.")
-    st.switch_page("login_app.py")
+    st.switch_page("app.py")
     st.stop()
 
 # File to store last loaded user
@@ -59,7 +59,7 @@ with st.sidebar:
     # Add a logout button
     if st.button("Logout"):
         st.session_state.logged_in = False
-        st.switch_page("login_app.py")
+        st.switch_page("app.py")
 
 # Split layout into two columns
 col1, col2 = st.columns([1, 1])
