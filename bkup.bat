@@ -7,5 +7,8 @@ copy main.py main.txt
 :: Copy OtherDuel.py to OtherDuel.txt
 copy xp_tracker.py xp_tracker.txt
 
+:: Copy app.py to app.txt
+copy app.py app.txt
+
 :: Pause to see the output
 pause
