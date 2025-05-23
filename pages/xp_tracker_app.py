@@ -5,6 +5,12 @@ from datetime import datetime
 from xp_tracker import User, Task
 import os
 
+# Check if user is logged in
+if "logged_in" not in st.session_state or not st.session_state.logged_in:
+    st.error("Please log in to access this page.")
+    st.switch_page("login_app.py")
+    st.stop()
+
 # File to store last loaded user
 LAST_USER_FILE = "last_user.txt"
 
@@ -50,6 +56,10 @@ with st.sidebar:
             st.success(f"Loaded user: {user_name}")
         else:
             st.error(f"User {user_name} not found.")
+    # Add a logout button
+    if st.button("Logout"):
+        st.session_state.logged_in = False
+        st.switch_page("login_app.py")
 
 # Split layout into two columns
 col1, col2 = st.columns([1, 1])
@@ -58,7 +68,7 @@ col1, col2 = st.columns([1, 1])
 with col1:
     st.subheader("Add Task", help=None)
     
-    # Apply CSS to reduce spacing in the form
+    # Apply CSS to reduce spacing in the form (unchanged)
     st.markdown(
         """
         <style>
