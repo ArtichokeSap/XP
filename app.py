@@ -201,28 +201,33 @@ with col2:
     else:
         st.write("No stat data to plot yet.")
     
-    # XP Trend plot
+    # XP Trend plot (Cumulative XP over time)
     st.subheader("XP Trend", help=None)
     if user.tasks:
         sorted_tasks = sorted(user.tasks, key=lambda t: t.date)
-        df = pd.DataFrame([
-            {
+        # Calculate cumulative XP
+        df_data = []
+        cumulative_xp = 0
+        for t in sorted_tasks:
+            xp = t.duration * (2 if t.outside else 1) * (min(len(user.streaks.get(t.category, [])) + 1, 3) if t.category in ['Music', 'Typing'] else 1)
+            cumulative_xp += xp
+            df_data.append({
                 "Date": t.date,
-                "XP": t.duration * (2 if t.outside else 1) * (min(len(user.streaks.get(t.category, [])) + 1, 3) if t.category in ['Music', 'Typing'] else 1)
-            }
-            for t in sorted_tasks
-        ])
+                "XP": cumulative_xp,
+                "Task": t.name
+            })
+        df = pd.DataFrame(df_data)
         fig = go.Figure(data=go.Scatter(
             x=df['Date'],
             y=df['XP'],
             mode='lines+markers',
-            text=[t.name for t in sorted_tasks],
+            text=df['Task'],
             hoverinfo='text+x+y'
         ))
         fig.update_layout(
-            title="XP Over Time",
+            title="Cumulative XP Over Time",
             xaxis_title="Date",
-            yaxis_title="XP",
+            yaxis_title="Cumulative XP",
             xaxis_title_font=dict(size=32, weight='bold'),
             yaxis_title_font=dict(size=32, weight='bold'),
             margin=dict(l=20, r=20, t=20, b=20)
