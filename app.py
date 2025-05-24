@@ -57,34 +57,10 @@ col1, col2 = st.columns([1, 1])
 # Left pane for inputs and recent tasks
 with col1:
     st.subheader("Add Task", help=None)
-    
-    # Apply CSS to reduce spacing in the form
-    st.markdown(
-        """
-        <style>
-        /* Target the form container to reduce spacing between elements */
-        div[data-testid="stForm"] > div > div {
-            margin-bottom: 0px !important;
-            padding-bottom: 0px !important;
-        }
-        /* Target the radio widget's parent container */
-        div.row-widget.stRadio {
-            margin-bottom: 0px !important;
-            padding-bottom: 0px !important;
-        }
-        /* Target the horizontal radio group specifically */
-        div[data-testid="stHorizontalBlock"] {
-            margin-bottom: 0px !important;
-            padding-bottom: 0px !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-    
+      
     with st.form(key="task_form", clear_on_submit=False):
         # Row 1: Description, Category, Date
-        row1 = st.columns([2, 1, 1])
+        row1 = st.columns([1, 1, 1])
         with row1[0]:
             desc = st.text_input("Description", placeholder="Enter task description")
         with row1[1]:
@@ -103,36 +79,18 @@ with col1:
             format_func=lambda x: f"{x}",
             horizontal=True
         )
-        # Apply CSS to color radio buttons
-        for s in stats:
-            st.markdown(
-                f"<style>input[type='radio'][value='{s}'] + div {{ color: {stat_colors[s]} !important; }}</style>",
-                unsafe_allow_html=True
-            )
         
         # Row 3: Minutes, Outside, Submit, Undo
         row3 = st.columns([1, 1, 1, 1])
         with row3[0]:
             minutes = st.number_input("Minutes", min_value=0, step=1, value=0, label_visibility="visible")
         with row3[1]:
-            st.markdown(
-                "<div style='display: flex; justify-content: center; align-items: center; padding: 0px;'>",
-                unsafe_allow_html=True
-            )
             outside = st.checkbox("Outside", label_visibility="visible")
             st.markdown("</div>", unsafe_allow_html=True)
         with row3[2]:
-            st.markdown(
-                "<div style='display: flex; justify-content: center; align-items: center; padding: 0px;'>",
-                unsafe_allow_html=True
-            )
             submit_clicked = st.form_submit_button("Submit")
             st.markdown("</div>", unsafe_allow_html=True)
         with row3[3]:
-            st.markdown(
-                "<div style='display: flex; justify-content: center; align-items: center; padding: 0px;'>",
-                unsafe_allow_html=True
-            )
             undo_clicked = st.form_submit_button("Undo")
             st.markdown("</div>", unsafe_allow_html=True)
     
